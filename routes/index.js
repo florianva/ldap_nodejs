@@ -55,6 +55,13 @@ router.get('/', function(req, res, next) {
 
 });
 
+
+router.get('/disconnect', function(req, res, next) {
+	sessLogin = undefined;
+	sessMdp = undefined;
+	res.redirect('/');
+});
+
 router.get('/login', function(req, res, next) {
 	res.render('login');
 });
@@ -169,6 +176,47 @@ router.post('/modify', function(req, res, next) {
 				
 	})
 
+});
+
+
+
+
+router.post('/add-group', function(req, res, next) {
+
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+	  })
+
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+
+		var nom = (req.body.nom);
+
+		var entry = {
+			cn: nom,
+			gidNumber : 1500+(Math.floor(Math.random()*Math.floor(20000))),
+			objectclass: ['top', 'posixGroup']
+		};
+		client.add('cn='+nom+',ou=group,dc=bla,dc=com', entry, function(err) {
+			if(err) console.log(err);
+			res.redirect('/');
+		});
+	})
+
+});
+
+
+router.post('/delete-group', function(req, res, next) {
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+	  })
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+
+		var nom = (req.body.nom);
+		client.del('cn='+nom+',ou=group,dc=bla,dc=com', function(err) {
+			if(err) console.log(err);
+			res.redirect('/');
+		});
+	})
 });
 
 

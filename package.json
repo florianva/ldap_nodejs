@@ -17,6 +17,7 @@
     "ldapjs": "^1.0.2",
     "morgan": "~1.9.0",
     "node-ssha256": "^0.1.1",
-    "serve-favicon": "~2.4.5"
+    "serve-favicon": "~2.4.5",
+    "uuid": "^3.2.1"
   }
 }
