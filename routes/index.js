@@ -1,87 +1,141 @@
 var express = require('express');
 var router = express.Router();
-var LDAP = require('ldap-client');
+var ldap = require('ldapjs');
+var ssha = require('node-ssha256');
+var maxUidNumber = 0;
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
 
- 
-	var ldap = new LDAP({
-	    uri:             'ldap://localhost',   // string 
-	    validatecert:    true,             // Verify server certificate 
-	    connecttimeout:  -1,                // seconds, default is -1 (infinite timeout), connect timeout 
-	    base:            'cn=admin,dc=bla,dc=com',          // default base for all future searches 
-	    attrs:           '*',               // default attribute list for future searches 
-	    filter:          '(objectClass=*)', // default filter for all future searches 
-	    scope:           LDAP.SUBTREE,      // optional function to call when disconnect occurs         
-	}, function(err) {
 
-		search_options = {
-	    base: 'dc=bla,dc=com',
-	    scope: LDAP.SUBTREE,
-	    filter: '(objectClass=*)',
-	    attrs: '*'
-		}
+  var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+  })
 
-		ldap.search(search_options, function(err,data){
-			//console.log(data);
-			tab=[];
-			for(var i=0;i<data.length;i++){
-				if(data[i].sn){
-					tab.push(data[i])
+  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+  	var opts = {
+	  filter: '(objectClass=*)',
+	  scope: 'sub',
+	  attributes: ['*']
+	};
+
+		client.search('ou=people, dc=bla,dc=com', opts, function(err, resu) {
+		  var tab = []
+		  resu.on('searchEntry', function(entry) {
+		  	console.log(JSON.stringify(entry.object));
+		  	tab.push(JSON.parse(JSON.stringify(entry.object)));
+		  });
+		  resu.on('searchReference', function(referral) {
+		    console.log('referral: ' + referral.uris.join());
+		  });
+		  resu.on('error', function(err) {
+		    console.error('error: ' + err.message);
+		  });
+		  resu.on('end', function(result) {
+		    console.log('status: ' + result.status);
+		    table = []
+		    for(var i=0;i<tab.length;i++){
+				if(tab[i].sn){
+					table.push(tab[i])
+					if (parseInt(tab[i].uidNumber) > maxUidNumber){
+						maxUidNumber = parseInt(tab[i].uidNumber);
+					}
 				}
 			}
-			res.render('index', { title: 'Ldap', ldapsearch: tab });
+				res.render('index', { title: 'Ldap', ldapsearch: table });
+		  });
 		});
-	    
-	});
+	})
 
-  
 });
 
 
-
-
-
 router.post('/add', function(req, res, next) {
-	var ldap = new LDAP({
-	    uri:             'ldap://localhost',   // string 
-	    validatecert:    true,             // Verify server certificate 
-	    connecttimeout:  -1,                // seconds, default is -1 (infinite timeout), connect timeout 
-	    base:            'cn=admin,dc=bla,dc=com',          // default base for all future searches 
-	    attrs:           '*',               // default attribute list for future searches 
-	    filter:          '(objectClass=*)', // default filter for all future searches 
-	    scope:           LDAP.SUBTREE,     // optional function to call when disconnect occurs         
 
-	}, function(err) {
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+	  })
+
+	  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+
 		var login = (req.body.login);
 		var nom = (req.body.nom);
 		var prenom = (req.body.prenom);
 		var password = (req.body.password);
-		var attrs = [
-		    { attr: 'objectClass',  vals: [ 'top','person','organizationalPerson','inetOrgPerson' ] },
-		    { attr: 'uid',      vals: [ login ] },
-		    { attr: 'sn',           vals: [ nom ] },
-		    { attr: 'givenName',      vals: [ prenom ] }
-		    //TODO : Ajout password
-		]
 
-		bind_options = {
-			binddn:'cn=admin,dc=bla,dc=com',
-			password: 'bla'
-		}
-
-		ldap.bind(bind_options, function(err){
-			ldap.add('uid='+login+',ou=people,dc=bla,dc=com',attrs, function(err){
-				if(err){console.log("zertzertzer")
-					console.log(err)
-				}else{
-					res.redirect('/');
-				}	
-			});
+		var entry = {
+			cn: login,
+			uid: login,
+			uidNumber : maxUidNumber+1,
+			gidNumber : maxUidNumber+1,
+			homeDirectory:'/home/'+login,
+			sn: nom,
+			givenName: prenom,
+			objectclass: ['top','person','organizationalPerson','inetOrgPerson', 'shadowAccount', 'posixAccount'],
+			userPassword: ssha.create(password)
+		};
+		client.add('uid='+login+',ou=people,dc=bla,dc=com', entry, function(err) {
+			if(err) console.log(err);
+			maxUidNumber = maxUidNumber+1;
+			res.redirect('/');
 		});
-		
-	});
+	})
+
 });
+
+router.post('/delete', function(req, res, next) {
+
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+	  })
+	  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+
+		var login = (req.body.login);
+		client.del('uid='+login+',ou=people,dc=bla,dc=com', function(err) {
+			if(err) console.log(err);
+			res.redirect('/');
+		});
+	})
+
+});
+
+
+
+router.post('/modify', function(req, res, next) {
+
+	var login = (req.body.login);
+	var attribut = (req.body.attribut);
+	var value = (req.body.value);
+
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+	  })
+	  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+
+	  	var modif = {}
+	  	if(attribut == 'nom'){
+	  		modif = { sn:value }
+	  	}else if(attribut == 'prenom'){
+	  		modif = { givenName:value }
+	  	}else if(attribut == 'password'){
+	  		modif = { userPassword: ssha.create(value) }
+	  	}
+
+	  	var change = new ldap.Change({
+		  operation: 'replace',
+		  modification: modif
+		});
+
+		client.modify('uid='+login+',ou=people,dc=bla,dc=com', change, function(err) {
+		  if(err) console.log(err);
+		  res.redirect('/');
+		});
+				
+	})
+
+});
+
+
+
 
 module.exports = router;
