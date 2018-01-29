@@ -3,16 +3,22 @@ var router = express.Router();
 var ldap = require('ldapjs');
 var ssha = require('node-ssha256');
 var maxUidNumber = 0;
+var sessLogin = undefined;
+var sessMdp = undefined;
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
+
+	if(sessLogin == undefined && sessMdp == undefined){
+		res.redirect('/login');
+	}
 
 
   var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
   })
 
-  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
   	var opts = {
 	  filter: '(objectClass=*)',
 	  scope: 'sub',
@@ -49,6 +55,36 @@ router.get('/', function(req, res, next) {
 
 });
 
+router.get('/login', function(req, res, next) {
+	res.render('login');
+});
+
+router.post('/login', function(req, res, next) {
+
+	var login = (req.body.login);
+	var mdp = (req.body.password);
+
+	 var client = ldap.createClient({
+	  	url: 'ldap://127.0.0.1'
+	  })
+
+	client.bind('cn='+login+',dc=bla,dc=com',mdp,function(err){
+		if(err){
+			console.log(err);
+			console.log('cn='+login+',dc=bla,dc=com')
+			console.log(mdp);
+			res.redirect('/login');
+		}
+		else{
+			sessLogin = login;
+			sessMdp = mdp;
+			res.redirect('/');
+		}
+
+	});
+});
+
+
 
 router.post('/add', function(req, res, next) {
 
@@ -56,7 +92,7 @@ router.post('/add', function(req, res, next) {
   	url: 'ldap://127.0.0.1'
 	  })
 
-	  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
 
 		var login = (req.body.login);
 		var nom = (req.body.nom);
@@ -88,7 +124,7 @@ router.post('/delete', function(req, res, next) {
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
-	  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
 
 		var login = (req.body.login);
 		client.del('uid='+login+',ou=people,dc=bla,dc=com', function(err) {
@@ -110,7 +146,7 @@ router.post('/modify', function(req, res, next) {
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
-	  client.bind('cn=admin,dc=bla,dc=com','bla',function(err){
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
 
 	  	var modif = {}
 	  	if(attribut == 'nom'){
