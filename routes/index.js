@@ -1,4 +1,5 @@
 var express = require('express');
+var session = require('express-session')
 var router = express.Router();
 var ldap = require('ldapjs');
 var ssha = require('node-ssha256');
@@ -9,7 +10,7 @@ var sessMdp = undefined;
 /* GET home page. */
 router.get('/', function(req, res, next) {
 
-	if(sessLogin == undefined && sessMdp == undefined){
+	if(req.session.isConnected == undefined || !req.session.isConnected ){
 		res.redirect('/login');
 	}
 
@@ -28,17 +29,12 @@ router.get('/', function(req, res, next) {
 		client.search('ou=people, dc=bla,dc=com', opts, function(err, resu) {
 		  var tab = []
 		  resu.on('searchEntry', function(entry) {
-		  	console.log(JSON.stringify(entry.object));
 		  	tab.push(JSON.parse(JSON.stringify(entry.object)));
 		  });
-		  resu.on('searchReference', function(referral) {
-		    console.log('referral: ' + referral.uris.join());
-		  });
-		  resu.on('error', function(err) {
-		    console.error('error: ' + err.message);
-		  });
+		 
+		
 		  resu.on('end', function(result) {
-		    console.log('status: ' + result.status);
+		  	// convert json users to array users
 		    table = []
 		    for(var i=0;i<tab.length;i++){
 				if(tab[i].sn){
@@ -48,7 +44,26 @@ router.get('/', function(req, res, next) {
 					}
 				}
 			}
-				res.render('index', { title: 'Ldap', ldapsearch: table });
+
+
+			client.search('ou=group, dc=bla,dc=com', opts, function(err, resu) {
+				  var tabGrp = []
+				  resu.on('searchEntry', function(entry) {
+				  	tabGrp.push(JSON.parse(JSON.stringify(entry.object)));
+				  });
+				 
+				
+				  resu.on('end', function(result) {
+				    tableGrp = []
+				    for(var i=0;i<tabGrp.length;i++){
+						tableGrp.push(tabGrp[i])
+					}
+					res.render('index', { title: 'Ldap', ldapsearch: table, groups : tableGrp });
+				  });
+
+			});
+
+
 		  });
 		});
 	})
@@ -57,13 +72,133 @@ router.get('/', function(req, res, next) {
 
 
 router.get('/disconnect', function(req, res, next) {
-	sessLogin = undefined;
-	sessMdp = undefined;
+	req.session.isConnected = false;
 	res.redirect('/');
 });
 
 router.get('/login', function(req, res, next) {
 	res.render('login');
+});
+
+router.get('/nousergroup', function(req, res, next) {
+
+	var group = (req.param('group'));
+	if(group==undefined){
+		res.json("");
+	}else{
+
+	  var client = ldap.createClient({
+	  	url: 'ldap://127.0.0.1'
+	  })
+
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  	var opts = {
+		  filter: '(objectClass=*)',
+		  scope: 'sub',
+		  attributes: ['*']
+		};
+
+			client.search('ou=people, dc=bla,dc=com', opts, function(err, resu) {
+			  var tab = []
+			  resu.on('searchEntry', function(entry) {
+			  	tab.push(JSON.parse(JSON.stringify(entry.object)));
+			  });
+			 
+			
+			  resu.on('end', function(result) {
+			  	// convert json users to array users
+				var optsGrp = {
+				  filter: '(objectClass=*)',
+				  scope: 'sub',
+				  attributes: ['*']
+				};
+
+				client.search('cn='+group+',ou=group, dc=bla,dc=com', optsGrp, function(err, resu) {
+					var tableUser = []
+					    
+					 var tabGrp = []
+					 resu.on('searchEntry', function(entry) {
+					  	tabGrp.push(JSON.parse(JSON.stringify(entry.object)));
+					 });
+					
+					 resu.on('end', function(result) {
+					    memberInGrp = tabGrp[0].memberUid;
+					    for(var i=0;i<tab.length;i++){
+							if((tab[i].sn && memberInGrp && memberInGrp.indexOf(tab[i].uid) == -1) || memberInGrp == undefined){
+								if(tab[i].uid != undefined )tableUser.push(tab[i])
+							}
+						}
+						res.json(tableUser);
+					});
+
+				});
+
+			  });
+			});
+		})
+	}
+
+});
+
+
+router.get('/usergroup', function(req, res, next) {
+
+	var group = (req.param('group'));
+	if(group==undefined){
+		res.json("");
+	}else{
+
+	  var client = ldap.createClient({
+	  	url: 'ldap://127.0.0.1'
+	  })
+
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  	var opts = {
+		  filter: '(objectClass=*)',
+		  scope: 'sub',
+		  attributes: ['*']
+		};
+
+			client.search('ou=people, dc=bla,dc=com', opts, function(err, resu) {
+			  var tab = []
+			  resu.on('searchEntry', function(entry) {
+			  	tab.push(JSON.parse(JSON.stringify(entry.object)));
+			  });
+			 
+			
+			  resu.on('end', function(result) {
+			  	// convert json users to array users
+				var optsGrp = {
+				  filter: '(objectClass=*)',
+				  scope: 'sub',
+				  attributes: ['*']
+				};
+
+				client.search('cn='+group+',ou=group, dc=bla,dc=com', optsGrp, function(err, resu) {
+					var tableUser = []
+					    
+					 var tabGrp = []
+					 resu.on('searchEntry', function(entry) {
+					  	tabGrp.push(JSON.parse(JSON.stringify(entry.object)));
+					 });
+					
+					 resu.on('end', function(result) {
+					     memberInGrp = tabGrp[0].memberUid;
+					    for(var i=0;i<tab.length;i++){
+							if((tab[i].sn && memberInGrp && memberInGrp.indexOf(tab[i].uid) != -1)){
+								if(tab[i].uid != undefined )tableUser.push(tab[i])
+							}
+						}
+						res.json(tableUser);
+					});
+
+				});
+
+			  });
+			});
+		})
+	}
+
 });
 
 router.post('/login', function(req, res, next) {
@@ -83,8 +218,7 @@ router.post('/login', function(req, res, next) {
 			res.redirect('/login');
 		}
 		else{
-			sessLogin = login;
-			sessMdp = mdp;
+			req.session.isConnected = true;
 			res.redirect('/');
 		}
 
@@ -172,17 +306,14 @@ router.post('/modify', function(req, res, next) {
 		client.modify('uid='+login+',ou=people,dc=bla,dc=com', change, function(err) {
 		  if(err) console.log(err);
 		  res.redirect('/');
-		});
-				
+		});			
 	})
-
 });
 
 
 
 
 router.post('/add-group', function(req, res, next) {
-
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
@@ -217,6 +348,57 @@ router.post('/delete-group', function(req, res, next) {
 			res.redirect('/');
 		});
 	})
+});
+
+
+router.post('/modify-group-add', function(req, res, next) {
+	var uid = (req.body.uid);
+	var group = (req.body.group);
+
+
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+	  })
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+
+	  	var modif = {memberUid:uid}
+	  	
+	  	var change = new ldap.Change({
+		  operation: 'add',
+		  modification: modif
+		});
+
+		client.modify('cn='+group+',ou=group,dc=bla,dc=com', change, function(err) {
+		  if(err) console.log(err);
+		  res.redirect('/');
+		});			
+	})
+
+});
+
+
+router.post('/modify-group-rm', function(req, res, next) {
+	var uid = (req.body.uid);
+	var group = (req.body.group);
+
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+	  })
+	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+
+	  	var modif = {memberUid:uid}
+	  	
+	  	var change = new ldap.Change({
+		  operation: 'delete',
+		  modification: modif
+		});
+
+		client.modify('cn='+group+',ou=group,dc=bla,dc=com', change, function(err) {
+		  if(err) console.log(err);
+		  res.redirect('/');
+		});			
+	})
+
 });
 
 

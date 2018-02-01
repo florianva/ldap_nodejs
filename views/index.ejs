@@ -7,13 +7,14 @@
     <script type="text/javascript" src="/jquery/dist/jquery.min.js"></script>
   </head>
   <body>
-  	<a style="float:right" href="/disconnect">Deconnexion</a>
+  	<a style="float:right" href="/disconnect" class="btn btn-danger btn-lg"><span class="glyphicon glyphicon-log-out"></span> Déconnexion</a>
+
    	<div class="container">
     	<div class="row">
     		<div class="col-md-12">
-				<div class="panel panel-primary">
+				<div class="panel panel-default">
 					<div class="panel-heading">
-						<h3 class="panel-title">LdapSearch</h3>
+						<h3 class="panel-title">Liste des utilisateurs</h3>
 						<div class="pull-right">
 							<span class="clickable filter" data-toggle="tooltip" title="Toggle table filter" data-container="body">
 							</span>
@@ -85,9 +86,18 @@
 									</div>
 								</form>
 								<form id="modify-form" action="/modify" method="post" role="form" style="display: none;">
+
 									<div class="form-group">
-										<input type="text" name="login" id="login" tabindex="1" class="form-control" placeholder="UID" value="">
+											<div class="form-group">
+											<label for="attribut">UID</label>
+											<select name="login" class="form-control" id="login" required>
+												<% ldapsearch.forEach(function(item){ %>
+						    					<option value="<%= item.uid %>"><%= item.uid %></option>
+									    	<% }) %>
+											</select> 
+										</div>
 									</div>
+
 									<div class="form-group">
 										<label for="attribut">Attribut à modifier</label>
 										<select name="attribut" class="form-control" id="attribut" required>
@@ -111,9 +121,18 @@
 									</div>
 								</form>
 								<form id="delete-form" action="/delete" method="post" role="form" style="display: none;">
+									
 									<div class="form-group">
-										<input type="text" name="login" id="identifiant" tabindex="1" class="form-control" placeholder="UID" value="">
+											<div class="form-group">
+											<label for="attribut">UID</label>
+											<select name="login" class="form-control" id="login" required>
+												<% ldapsearch.forEach(function(item){ %>
+						    					<option value="<%= item.uid %>"><%= item.uid %></option>
+									    	<% }) %>
+											</select> 
+										</div>
 									</div>
+
 									<div class="form-group">
 										<div class="row">
 											<div class="col-sm-6 col-sm-offset-3">
@@ -161,35 +180,68 @@
 										</div>
 									</div>
 								</form>
-								<form id="modify-form-group" action="/modify-group" method="post" role="form" style="display: none;">
-									<div class="form-group">
-										<input type="text" name="login" id="login" tabindex="1" class="form-control" placeholder="UID" value="">
-									</div>
-									<div class="form-group">
-										<label for="attribut">Attribut à modifier</label>
-										<select name="attribut" class="form-control" id="attribut" required>
-											<option value="nom">Nom</option>
-											<option value="prenom">Prenom</option>
-											<option value="password">Mot de passe</option>
-										</select> 
-									</div>
-									<div class="form-group">
-										<input type="text" name="value" id="value" tabindex="1" class="form-control" placeholder="Nouvelle valeur" value="">
-									</div>
-									
-
-
-									<div class="form-group">
-										<div class="row">
-											<div class="col-sm-6 col-sm-offset-3">
-												<input type="submit" name="modify-user-submit" id="modify-user-submit" tabindex="4" class="form-control btn btn-register" value="Enregistrer">
+								<div id="modify-form-group" style="display: none;">
+									<form action="/modify-group-add" method="post" role="form">
+										<legend>Ajouter un utilisateur</legend>
+										<div class="form-group">
+											<label for="groupselect">Choisissez un groupe</label>
+											<select name="group" class="form-control" id="groupselect" required>
+												<% groups.forEach(function(item){ %>
+													<option value="<%= item.cn %>"><%= item.cn %></option>
+						    					<% }) %>
+											</select> 
+										</div>
+										<div class="form-group">
+											<label for="userSelect">Utilisateur à ajouter</label>
+											<select name="uid" class="form-control" id="userSelect" required>
+												
+											</select> 
+										</div>
+										
+										
+										<div class="form-group">
+											<div class="row">
+												<div class="col-sm-6 col-sm-offset-3">
+													<input type="submit" name="modify-user-submit" id="modify-user-submit" tabindex="4" class="form-control btn btn-register" value="Ajouter">
+												</div>
 											</div>
 										</div>
-									</div>
-								</form>
+									</form>
+
+									<form action="/modify-group-rm" method="post" role="form">
+										<legend>Supprimer un utilisateur</legend>
+										<div class="form-group">
+											<label for="groupselect">Choisissez un groupe</label>
+											<select name="group" class="form-control" id="groupselectRm" required>
+												<% groups.forEach(function(item){ %>
+													<option value="<%= item.cn %>"><%= item.cn %></option>
+						    					<% }) %>
+											</select> 
+										</div>
+										<div class="form-group">
+											<label for="userSelectRm">Utilisateur à supprimer</label>
+											<select name="uid" class="form-control" id="userSelectRm" required>
+												
+											</select> 
+										</div>
+										
+										
+										<div class="form-group">
+											<div class="row">
+												<div class="col-sm-6 col-sm-offset-3">
+													<input type="submit" name="modify-user-submit" id="modify-user-submit-rm" tabindex="4" class="form-control btn btn-register" value="Supprimer">
+												</div>
+											</div>
+										</div>
+									</form>
+							</div>
 								<form id="delete-form-group" action="/delete-group" method="post" role="form" style="display: none;">
 									<div class="form-group">
-										<input type="text" name="nom" id="nom" tabindex="1" class="form-control" placeholder="nom" value="">
+										<select name="nom" class="form-control" id="groupselectDelete" required>
+												<% groups.forEach(function(item){ %>
+													<option value="<%= item.cn %>"><%= item.cn %></option>
+						    					<% }) %>
+											</select> 
 									</div>
 									<div class="form-group">
 										<div class="row">
@@ -211,6 +263,28 @@
 	</div>
 	<script type="text/javascript">
 		$(function() {
+
+
+			$('#groupselect').on('change',function(e){
+				$.get( "/nousergroup?group="+$('#groupselect option:selected').text(), function( data ) {
+					
+					data.forEach(function(item){
+						$( "#userSelect" ).append("<option value='"+item.uid+"'>"+item.uid+"</option>")
+					})
+
+				});
+			})
+
+			$('#groupselectRm').on('change',function(e){
+				$.get( "/usergroup?group="+$('#groupselectRm option:selected').text(), function( data ) {
+					
+					data.forEach(function(item){
+						$( "#userSelectRm" ).append("<option value='"+item.uid+"'>"+item.uid+"</option>")
+					})
+
+				});
+			})
+			
 
 		    $('#add-form-link').click(function(e) {
 				$("#add-form").delay(100).fadeIn(100);
