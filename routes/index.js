@@ -4,8 +4,6 @@ var router = express.Router();
 var ldap = require('ldapjs');
 var ssha = require('node-ssha256');
 var maxUidNumber = 0;
-var sessLogin = undefined;
-var sessMdp = undefined;
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -19,7 +17,7 @@ router.get('/', function(req, res, next) {
   	url: 'ldap://127.0.0.1'
   })
 
-  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
   	var opts = {
 	  filter: '(objectClass=*)',
 	  scope: 'sub',
@@ -91,7 +89,7 @@ router.get('/nousergroup', function(req, res, next) {
 	  	url: 'ldap://127.0.0.1'
 	  })
 
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 	  	var opts = {
 		  filter: '(objectClass=*)',
 		  scope: 'sub',
@@ -152,7 +150,7 @@ router.get('/usergroup', function(req, res, next) {
 	  	url: 'ldap://127.0.0.1'
 	  })
 
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 	  	var opts = {
 		  filter: '(objectClass=*)',
 		  scope: 'sub',
@@ -219,6 +217,10 @@ router.post('/login', function(req, res, next) {
 		}
 		else{
 			req.session.isConnected = true;
+
+			req.session.login = login;
+			req.session.mdp = mdp;
+
 			res.redirect('/');
 		}
 
@@ -233,7 +235,7 @@ router.post('/add', function(req, res, next) {
   	url: 'ldap://127.0.0.1'
 	  })
 
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 
 		var login = (req.body.login);
 		var nom = (req.body.nom);
@@ -265,7 +267,7 @@ router.post('/delete', function(req, res, next) {
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 
 		var login = (req.body.login);
 		client.del('uid='+login+',ou=people,dc=bla,dc=com', function(err) {
@@ -273,6 +275,25 @@ router.post('/delete', function(req, res, next) {
 			res.redirect('/');
 		});
 	})
+
+});
+
+router.post('/deleteall', function(req, res, next) {
+	var users = (req.body.users);
+	var client = ldap.createClient({
+  		url: 'ldap://127.0.0.1'
+	 });
+	client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
+		var size = users.length
+		users.forEach(function(item, index, object){
+			client.del('uid='+item+',ou=people,dc=bla,dc=com', function(err) {
+			size = size - 1;
+			if(size == 0) res.redirect('/');
+			});
+		})
+		if(err) console.log(err);
+		
+	});
 
 });
 
@@ -287,7 +308,7 @@ router.post('/modify', function(req, res, next) {
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 
 	  	var modif = {}
 	  	if(attribut == 'nom'){
@@ -318,7 +339,7 @@ router.post('/add-group', function(req, res, next) {
   	url: 'ldap://127.0.0.1'
 	  })
 
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 
 		var nom = (req.body.nom);
 
@@ -340,7 +361,7 @@ router.post('/delete-group', function(req, res, next) {
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 
 		var nom = (req.body.nom);
 		client.del('cn='+nom+',ou=group,dc=bla,dc=com', function(err) {
@@ -359,7 +380,7 @@ router.post('/modify-group-add', function(req, res, next) {
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 
 	  	var modif = {memberUid:uid}
 	  	
@@ -384,7 +405,7 @@ router.post('/modify-group-rm', function(req, res, next) {
 	var client = ldap.createClient({
   	url: 'ldap://127.0.0.1'
 	  })
-	  client.bind('cn='+sessLogin+',dc=bla,dc=com',sessMdp,function(err){
+	  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
 
 	  	var modif = {memberUid:uid}
 	  	

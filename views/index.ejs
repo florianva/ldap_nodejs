@@ -14,11 +14,21 @@
     		<div class="col-md-12">
 				<div class="panel panel-default">
 					<div class="panel-heading">
-						<h3 class="panel-title">Liste des utilisateurs</h3>
+						
 						<div class="pull-right">
+
+<form action="/deleteall" method="post">
+	<% ldapsearch.forEach(function(item){ %>
+		<input type="hidden" name="users" value="<%= item.uid %>">
+	<% }) %>
+	<button class="btn btn-danger btn-sm"><span class="glyphicon glyphicon-trash"></span></button>
+</form>
 							<span class="clickable filter" data-toggle="tooltip" title="Toggle table filter" data-container="body">
 							</span>
 						</div>
+						<h3 class="panel-title">Liste des utilisateurs</h3>
+
+
 					</div>
 					<table class="table table-hover" id="dev-table">
 						<thead>
