@@ -212,10 +212,23 @@ router.post('/login', function(req, res, next) {
 
 	client.bind('cn='+login+',dc=bla,dc=com',mdp,function(err){
 		if(err){
-			console.log(err);
-			console.log('cn='+login+',dc=bla,dc=com')
-			console.log(mdp);
-			res.redirect('/login');
+			client.bind('uid='+login+',ou=people,dc=bla,dc=com',mdp,function(err){
+				if(err){
+					console.log(err);
+					console.log('cn='+login+',dc=bla,dc=com')
+					console.log(mdp);
+					res.redirect('/login');
+				}
+				else{
+					req.session.isConnected = true;
+
+					req.session.login = login;
+					req.session.mdp = mdp;
+
+					res.redirect('/');
+				}
+
+			});
 		}
 		else{
 			req.session.isConnected = true;
@@ -253,7 +266,7 @@ router.post('/add', function(req, res, next) {
 			sn: nom,
 			givenName: prenom,
 			objectclass: ['top','person','organizationalPerson','inetOrgPerson', 'shadowAccount', 'posixAccount'],
-			userPassword: ssha.create(password)
+			userPassword: password
 		};
 		client.add('uid='+login+',ou=people,dc=bla,dc=com', entry, function(err) {
 			if(err) console.log(err);
@@ -321,7 +334,7 @@ router.post('/modify', function(req, res, next) {
 	  	}else if(attribut == 'prenom'){
 	  		modif = { givenName:value }
 	  	}else if(attribut == 'password'){
-	  		modif = { userPassword: ssha.create(value) }
+	  		modif = { userPassword: value }
 	  	}
 
 	  	var change = new ldap.Change({
@@ -492,7 +505,7 @@ router.post('/import', function(req, res, next) {
 							sn: nom,
 							givenName: prenom,
 							objectclass: ['top','person','organizationalPerson','inetOrgPerson', 'shadowAccount', 'posixAccount'],
-							userPassword: ssha.create(password)
+							userPassword: password
 						};
 						client.add('uid='+login+',ou=people,dc=bla,dc=com', entry, function(err) {
 							if(err) console.log(err);
