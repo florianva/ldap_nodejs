@@ -9,6 +9,7 @@
   <body>
   	<a style="float:right" href="/disconnect" class="btn btn-danger btn-lg"><span class="glyphicon glyphicon-log-out"></span> Déconnexion</a>
 
+  	<a style="float:right" href="/export" class="btn btn-success btn-lg"><span class="glyphicon glyphicon-log-out"></span> Export</a>
    	<div class="container">
     	<div class="row">
     		<div class="col-md-12">
@@ -277,7 +278,7 @@
 
 			$('#groupselect').on('change',function(e){
 				$.get( "/nousergroup?group="+$('#groupselect option:selected').text(), function( data ) {
-					
+					$( "#userSelect" ).html("");
 					data.forEach(function(item){
 						$( "#userSelect" ).append("<option value='"+item.uid+"'>"+item.uid+"</option>")
 					})
@@ -287,7 +288,7 @@
 
 			$('#groupselectRm').on('change',function(e){
 				$.get( "/usergroup?group="+$('#groupselectRm option:selected').text(), function( data ) {
-					
+					$( "#userSelectRm" ).html("");
 					data.forEach(function(item){
 						$( "#userSelectRm" ).append("<option value='"+item.uid+"'>"+item.uid+"</option>")
 					})

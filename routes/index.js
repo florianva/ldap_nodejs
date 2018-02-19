@@ -259,7 +259,6 @@ router.post('/add', function(req, res, next) {
 			res.redirect('/');
 		});
 	})
-
 });
 
 router.post('/delete', function(req, res, next) {
@@ -420,6 +419,36 @@ router.post('/modify-group-rm', function(req, res, next) {
 		});			
 	})
 
+});
+
+router.get('/export', function(req, res, next) {
+	
+	var client = ldap.createClient({
+  	url: 'ldap://127.0.0.1'
+  })
+
+  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
+  	var opts = {
+	  filter: '(objectClass=*)',
+	  scope: 'sub',
+	  attributes: ['*']
+	};
+
+		client.search('ou=people, dc=bla,dc=com', opts, function(err, resu) {
+		  console.log(err);
+		  var tab = [];
+		  resu.on('searchEntry', function(entry) {
+		  	tab.push(JSON.parse(JSON.stringify(entry.object)));
+		  });
+		  resu.on('end', function(result) {
+		  	res.header("Content-type","application/json");
+		  	res.header("Content-disposition","attachment;filename=export.json")
+		  	res.send(tab);
+		})
+		});
+
+		
+	})
 });
 
 
