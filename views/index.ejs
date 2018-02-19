@@ -7,9 +7,17 @@
     <script type="text/javascript" src="/jquery/dist/jquery.min.js"></script>
   </head>
   <body>
-  	<a style="float:right" href="/disconnect" class="btn btn-danger btn-lg"><span class="glyphicon glyphicon-log-out"></span> Déconnexion</a>
-
-  	<a style="float:right" href="/export" class="btn btn-success btn-lg"><span class="glyphicon glyphicon-log-out"></span> Export</a>
+  	<div style="float:right">
+	  	<a style="float:right" href="/disconnect" class="btn btn-danger btn-lg"><span class="glyphicon glyphicon-log-out"></span> Déconnexion</a>
+	  	<div>
+		  	<a style="float:right; margin-top: 10px" href="/export" class="btn btn-success btn-lg">Export</a>
+		  	<form id="import" style="float:right; margin-top: 10px" action="/import" method="post" enctype="multipart/form-data">
+				<input type="button" id="loadFileXml" class="btn btn-info btn-lg btn-file" value="Import" onclick="document.getElementById('file').click();" />
+				<input type="file" style="display:none;" id="file" name="file"/>
+				<!--	<input type="submit" value="upload">-->
+			</form>
+	    </div>
+	</div>
    	<div class="container">
     	<div class="row">
     		<div class="col-md-12">
@@ -296,6 +304,13 @@
 				});
 			})
 			
+			$(document).on('change', ':file', function() {
+			    var input = $(this),
+			        numFiles = input.get(0).files ? input.get(0).files.length : 1,
+			        label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+			    input.trigger('fileselect', [numFiles, label]);
+			    $("#import").submit();
+			});
 
 		    $('#add-form-link').click(function(e) {
 				$("#add-form").delay(100).fadeIn(100);

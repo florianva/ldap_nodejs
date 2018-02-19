@@ -5,7 +5,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var session = require('express-session')
-
+var busboy = require('connect-busboy');
 var index = require('./routes/index');
 var users = require('./routes/users');
 
@@ -19,6 +19,7 @@ var sess = {
 }
 
 app.use(session(sess))
+app.use(busboy())
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

@@ -3,6 +3,8 @@ var session = require('express-session')
 var router = express.Router();
 var ldap = require('ldapjs');
 var ssha = require('node-ssha256');
+var fs = require('fs');
+var busboy = require('connect-busboy');
 var maxUidNumber = 0;
 
 /* GET home page. */
@@ -279,20 +281,24 @@ router.post('/delete', function(req, res, next) {
 
 router.post('/deleteall', function(req, res, next) {
 	var users = (req.body.users);
-	var client = ldap.createClient({
-  		url: 'ldap://127.0.0.1'
-	 });
-	client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
-		var size = users.length
-		users.forEach(function(item, index, object){
-			client.del('uid='+item+',ou=people,dc=bla,dc=com', function(err) {
-			size = size - 1;
-			if(size == 0) res.redirect('/');
-			});
-		})
-		if(err) console.log(err);
-		
-	});
+	if(users == undefined){
+		res.redirect('/');
+	}else{
+		var client = ldap.createClient({
+	  		url: 'ldap://127.0.0.1'
+		 });
+		client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
+			var size = users.length
+			users.forEach(function(item, index, object){
+				client.del('uid='+item+',ou=people,dc=bla,dc=com', function(err) {
+				size = size - 1;
+				if(size == 0) res.redirect('/');
+				});
+			})
+			if(err) console.log(err);
+			
+		});
+	}
 
 });
 
@@ -444,6 +450,7 @@ router.get('/export', function(req, res, next) {
 		  	res.header("Content-type","application/json");
 		  	res.header("Content-disposition","attachment;filename=export.json")
 		  	res.send(tab);
+		  	res.redi
 		})
 		});
 
@@ -452,6 +459,59 @@ router.get('/export', function(req, res, next) {
 });
 
 
+router.post('/import', function(req, res, next) {
+	var fstream;
+	console.log(req.files);
+    req.pipe(req.busboy);
+    req.busboy.on('file', function (fieldname, file, filename) {
+        console.log("Uploading: " + filename);
+        if (filename.split(".")[1]=="json"){
+        	fstream = fs.createWriteStream('files/' + filename);
+        file.pipe(fstream);
+        fstream.on('close', function () {
+        	var obj = JSON.parse(fs.readFileSync('files/' + filename,"utf8"));
 
+        	var client = ldap.createClient({
+		  	url: 'ldap://127.0.0.1'
+			  })
+
+			  client.bind('cn='+req.session.login+',dc=bla,dc=com',req.session.mdp,function(err){
+			  	var ii = 0;
+			  	obj.forEach(function(val,i){
+				  	var login = (val.uid);
+					var nom = (val.sn);
+					var prenom = (val.givenName);
+					var password = (val.userPassword);
+					if(login !== undefined && login !== '' && nom !== undefined && nom !== '' && prenom !== undefined && prenom !== '' && password !== undefined && password !== ''){
+						var entry = {
+							cn: login,
+							uid: login,
+							uidNumber : maxUidNumber+1,
+							gidNumber : maxUidNumber+1,
+							homeDirectory:'/home/'+login,
+							sn: nom,
+							givenName: prenom,
+							objectclass: ['top','person','organizationalPerson','inetOrgPerson', 'shadowAccount', 'posixAccount'],
+							userPassword: ssha.create(password)
+						};
+						client.add('uid='+login+',ou=people,dc=bla,dc=com', entry, function(err) {
+							if(err) console.log(err);
+							maxUidNumber = maxUidNumber+1;
+							ii++;
+							if(ii==obj.length-1){
+						  		res.redirect('/');
+						  	}
+						});
+					}
+			  	});
+			})
+
+        });
+       
+        }else{
+        	res.redirect('/');
+        }  
+    });
+});
 
 module.exports = router;
